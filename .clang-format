@@ -1,0 +1,72 @@
+---
+SpaceBeforeSquareBrackets: false
+SpaceInEmptyBlock: false
+AlignAfterOpenBracket: BlockIndent
+SpacesInSquareBrackets: false
+Standard: Latest
+TabWidth: 4
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterCaseLabel: true
+  AfterClass: true
+  AfterControlStatement: Always
+  AfterEnum: true
+  AfterFunction: true
+  AfterNamespace: true
+  AfterObjCDeclaration: true
+  AfterStruct: true
+  AfterUnion: true
+  AfterExternBlock: true
+  BeforeCatch: true
+  BeforeElse: true
+  BeforeLambdaBody: true
+  BeforeWhile: true
+  IndentBraces: false
+  SplitEmptyRecord: true
+  SplitEmptyFunction: true
+  SplitEmptyNamespace: true
+BinPackArguments: false
+BinPackParameters: OnePerLine
+AllowShortCaseLabelsOnASingleLine: false
+SpaceBeforeParensOptions:
+  AfterControlStatements: true
+  AfterPlacementOperator: true
+  AfterForeachMacros: true
+  AfterFunctionDeclarationName: true
+  AfterFunctionDefinitionName: true
+  AfterIfMacros: true
+  AfterNot: true
+  AfterOverloadedOperator: true
+  AfterRequiresInClause: true
+  AfterRequiresInExpression: true
+  BeforeNonEmptyParentheses: true
+AllowShortIfStatementsOnASingleLine: Never
+SpaceBeforeCtorInitializerColon: true
+AllowShortFunctionsOnASingleLine: Empty
+AlignArrayOfStructures: Left
+PackConstructorInitializers: BinPack
+SpaceBeforeCpp11BracedList: true
+AlignConsecutiveAssignments:
+  Enabled: true
+  AcrossEmptyLines: false
+  AcrossComments: true
+  AlignCompound: true
+  AlignFunctionDeclarations: true
+  AlignFunctionPointers: true
+  PadOperators: true
+SortIncludes:
+  Enabled: true
+  IgnoreCase: false
+AlignConsecutiveShortCaseStatements:
+  Enabled: false
+Cpp11BracedListStyle: false
+EmptyLineBeforeAccessModifier: Always
+InsertBraces: true
+NamespaceIndentation: All
+IndentWidth: 4
+PointerAlignment: Left
+PenaltyBreakAssignment: 120
+LambdaBodyIndentation: OuterScope
+AllowShortLambdasOnASingleLine: None
+ColumnLimit: 120
+
