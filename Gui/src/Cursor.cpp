@@ -28,4 +28,14 @@ namespace gui
         ::SetCursorPos(static_cast<int>(x), static_cast<int>(y));
 #endif
     }
+
+
+    void Cursor::setType(CursorType localType) noexcept
+    {
+        type = localType;
+    }
+    CursorType Cursor::getType() noexcept
+    {
+        return type;
+    }
 };

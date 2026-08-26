@@ -1,6 +1,9 @@
 // Layout.hpp
 #pragma once
 #include "Widget.hpp"
+#include "Css/StyleSheetEngine.hpp"
+
+
 #include <memory>
 #include <utility>
 #include <vector>
@@ -11,6 +14,7 @@ namespace gui
     class Layout : public Widget
     {
       public:
+        REGISTER_WIDGET_CLASS_NAME(Layout)
         GUI_WIDGET_MOVABLE(Layout)
         Layout() = default;
 
@@ -39,13 +43,13 @@ namespace gui
                 return;
             }
             child->setParent(this);
-            m_children.push_back(std::move(child));
+            children.push_back(std::move(child));
             onBoundsChanged();
         }
 
         void onAttached() override
         {
-            for (auto& child : m_children)
+            for (auto& child : children)
             {
                 child->setParent(this);
             }
@@ -53,7 +57,7 @@ namespace gui
 
         void onDetached() override
         {
-            for (auto& child : m_children)
+            for (auto& child : children)
             {
                 child->setParent(nullptr);
             }
@@ -61,12 +65,25 @@ namespace gui
 
         const std::vector<std::unique_ptr<Widget>>& getChildren() const noexcept
         {
-            return m_children;
+            return children;
         }
 
         void onPaint(Renderer::Renderer& r) override
         {
-            for (auto& child : m_children)
+            // Color color = StyleSheetEngine::getProperty<Color>("background-color", *this);
+
+            // int borderRadius = StyleSheetEngine::getProperty<int>("border-radius", *this);
+
+            // if (borderRadius > 0)
+            // {
+            //     r.drawRoundedRect(m_bounds, color, borderRadius);
+            // }
+            // else
+            // {
+            //     r.drawRect(m_bounds, color);
+            // }
+        
+            for (auto& child : children)
             {
                 child->onPaint(r);
             }
@@ -74,11 +91,11 @@ namespace gui
 
         bool onMouseButtonDown(const Point<int>& pt) override
         {
-            for (auto& child : m_children)
+            for (auto& child : children)
             {
                 if (child->getBounds().contains(pt))
                 {
-                    m_activeChild = child.get();
+                    activeChild = child.get();
                     return child->onMouseButtonDown(pt);
                 }
             }
@@ -87,10 +104,10 @@ namespace gui
 
         bool onMouseButtonUp(const Point<int>& pt) override
         {
-            if (m_activeChild)
+            if (activeChild)
             {
-                bool handled  = m_activeChild->onMouseButtonUp(pt);
-                m_activeChild = nullptr;
+                bool handled  = activeChild->onMouseButtonUp(pt);
+                activeChild = nullptr;
                 return handled;
             }
             return false;
@@ -101,7 +118,7 @@ namespace gui
             Widget* hoveredChild = nullptr;
             if (isHovered)
             {
-                for (auto& child : m_children)
+                for (auto& child : children)
                 {
                     if (child->getBounds().contains(pt))
                     {
@@ -111,14 +128,14 @@ namespace gui
                 }
             }
 
-            for (auto& child : m_children)
+            for (auto& child : children)
             {
                 child->onMouseMove(pt, child.get() == hoveredChild);
             }
         }
 
       protected:
-        std::vector<std::unique_ptr<Widget>> m_children;
-        Widget* m_activeChild = nullptr;
+        std::vector<std::unique_ptr<Widget>> children;
+        Widget* activeChild = nullptr;
     };
 } // namespace gui

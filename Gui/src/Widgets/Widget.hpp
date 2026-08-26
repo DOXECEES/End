@@ -1,15 +1,19 @@
-// Widget.hpp
 #pragma once
 #include "Renderer/Renderer.hpp"
 #include <Types.hpp>
 
+
 #include <memory>
+#include <string_view>
 
 #define GUI_WIDGET_MOVABLE(ClassName)                                                                                  \
     std::unique_ptr<gui::Widget> moveToHeap() && override                                                              \
     {                                                                                                                  \
         return std::make_unique<ClassName>(std::move(*this));                                                          \
     }
+
+#define REGISTER_WIDGET_CLASS_NAME(ClassName) \
+    std::string_view getClassName() const override { return #ClassName; }
 
 namespace gui
 {
@@ -28,6 +32,15 @@ namespace gui
         int value         = 1;
     };
 
+    enum class WidgetState
+    {
+        Normal,
+        Hovered,
+        Pressed,
+        Disabled,
+        Focused
+    };
+
     class Widget
     {
       public:
@@ -42,48 +55,49 @@ namespace gui
 
         [[nodiscard]] Widget* getParent() const noexcept
         {
-            return m_parent;
+            return parent;
         }
         [[nodiscard]] Window* getWindow() const noexcept
         {
-            return m_window;
+            return window;
         }
 
-        void setParent(Widget* parent) noexcept
+        void setParent(Widget* localParent) noexcept
         {
-            m_parent = parent;
-            if (m_parent)
+            parent = localParent;
+            if (parent)
             {
-                m_window = m_parent->getWindow();
+                window = parent->getWindow();
                 onAttached();
             }
             else
             {
-                m_window = nullptr;
+                window = nullptr;
                 onDetached();
             }
         }
 
-        void setRootWindow(Window* window) noexcept
+        void setRootWindow(Window* localWindow) noexcept
         {
-            m_window = window;
+            window = localWindow;
             onAttached();
         }
 
         virtual void onAttached() {}
         virtual void onDetached() {}
 
-        void setBounds(const Rect<int>& bounds) noexcept
+        void setBounds(const Rect<int>& localBounds) noexcept
         {
-            m_bounds = bounds;
+            bounds = localBounds;
             onBoundsChanged();
         }
         [[nodiscard]] const Rect<int>& getBounds() const noexcept
         {
-            return m_bounds;
+            return bounds;
         }
 
-        virtual void onPaint(Renderer::Renderer& r) = 0;
+        virtual void onPaint(Renderer::Renderer& r);
+
 
         virtual bool onMouseButtonDown(const Point<int>& pt)
         {
@@ -93,7 +107,12 @@ namespace gui
         {
             return false;
         }
-        virtual void onMouseMove(const Point<int>& pt, bool isHovered) {}
+        virtual void onMouseMove(const Point<int>& pt, bool isHovered)
+        {
+            
+        }
+
+        virtual void onCharInput(wchar_t ch) {}
 
         virtual std::unique_ptr<Widget> moveToHeap() && = 0;
 
@@ -109,7 +128,6 @@ namespace gui
         Widget& stretchHeight(int weight = 1) & noexcept;
         Widget&& stretchHeight(int weight = 1) && noexcept;
 
-        // Ширина (Width Policies)
         Widget& fixedWidth(int w) & noexcept;
         Widget&& fixedWidth(int w) && noexcept;
 
@@ -119,13 +137,42 @@ namespace gui
         Widget& stretchWidth(int weight = 1) & noexcept;
         Widget&& stretchWidth(int weight = 1) && noexcept;
 
+        virtual std::string_view getClassName() const = 0;
+
+        void setStyleSheetClass(std::string className) noexcept { styleSheetClass = std::move(className); }
+        const std::string& getStyleSheetClass() const { return styleSheetClass; }
+
+        Widget& addClass(std::string_view className) & noexcept { styleSheetClass = className; return *this; }
+        Widget&& addClass(std::string_view className) && noexcept { styleSheetClass = className; return std::move(*this); }
+
+        WidgetState getState() const noexcept { return state; }
+
+        bool isFocused() const noexcept;
+
+        virtual int getPreferredHeight() const;
+
+        virtual Widget* getWidgetAt(const Point<int>& pt)
+        {
+            if (pt.x >= bounds.x && pt.y >= bounds.y && 
+                pt.x < bounds.x + bounds.width && pt.y < bounds.y + bounds.height)
+            {
+                return this;
+            }
+            return nullptr;
+        }
+
+
       protected:
         virtual void onBoundsChanged() {}
 
-        Rect<int> m_bounds { 0, 0, 0, 0 };
-        Widget* m_parent = nullptr;
-        Window* m_window = nullptr;
+        Rect<int> bounds { 0, 0, 0, 0 };
+        Widget* parent = nullptr;
+        Window* window = nullptr;
         WidgetSizePolicy verticalSizePolicy;
         WidgetSizePolicy horizontalSizePolicy;
+
+        std::string styleSheetClass;
+
+        WidgetState state = WidgetState::Normal;
     };
 } // namespace gui

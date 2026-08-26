@@ -45,6 +45,15 @@ namespace gui
             DispatchMessageW(&msg);
         }
     }
+    void Application::setStyleSheet(StyleSheet&& localStyleSheet) noexcept
+    {
+        styleSheetEngine.setStyleSheet(std::move(localStyleSheet));
+        for (auto* window : impl->windows)
+        {
+            window->repaint(true);
+        }
+    }
+
     Renderer::Renderer* Application::getRenderer() const noexcept
     {
         return impl->renderer.get();

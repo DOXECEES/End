@@ -4,6 +4,9 @@
 
 #include "Window/Window.hpp"
 
+#include <gdiplus.h>
+#pragma comment(lib, "Gdiplus.lib")
+
 namespace Renderer
 {
     static inline ::RECT toWin32Rect(const Rect<int>& rect) noexcept
@@ -16,6 +19,16 @@ namespace Renderer
         return RGB(color.r, color.g, color.b);
     }
 
+    static inline Gdiplus::Rect toGdiplusRect(const Rect<int>& rect) noexcept
+    {
+        return { rect.x, rect.y, rect.width, rect.height };
+    }
+
+    static inline Gdiplus::Color toGdiplusColor(const Color color) noexcept
+    {
+        return { color.a, color.r, color.g, color.b };
+    }
+
     static inline UINT toGdiTextFormatFlags(const TextPosition& position) noexcept
     {
         UINT flags = 0;
@@ -24,11 +37,11 @@ namespace Renderer
         case TextAlignment::Left:
             flags |= DT_LEFT;
             break;
-        
+
         case TextAlignment::Center:
             flags |= DT_CENTER;
             break;
-        
+
         case TextAlignment::Right:
             flags |= DT_RIGHT;
             break;
@@ -37,6 +50,17 @@ namespace Renderer
         }
 
         return flags;
+    }
+
+    GdiRenderer::GdiRenderer()
+    {
+        Gdiplus::GdiplusStartupInput gdiplusStartupInput;
+        Gdiplus::GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, nullptr);
+    }
+
+    GdiRenderer::~GdiRenderer()
+    {
+        Gdiplus::GdiplusShutdown(gdiplusToken);
     }
 
     void GdiRenderer::beginFrame(const gui::Window& window)
@@ -112,11 +136,30 @@ namespace Renderer
         ::FillRect(hdc, &winRect, brush);
         ::DeleteObject(brush);
     }
-    void GdiRenderer::drawText(
-        const std::string& text,
-        const TextPosition& position,
-        const Color& color
-    )
+    void GdiRenderer::drawRoundedRect(const Rect<int>& rect, const Color& color, int radius)
+    {
+        if (!hdc)
+        {
+            return;
+        }
+
+        Gdiplus::Graphics graphics(hdc);
+
+        graphics.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
+
+        Gdiplus::GraphicsPath* path = getRoundedRectanglePath(rect, radius);
+
+        Gdiplus::Color fillColor = toGdiplusColor(color);
+        Gdiplus::SolidBrush brush(fillColor);
+        // Gdiplus::Pen pen(Gdiplus::Color(255, 65, 105, 225), 3);
+
+        graphics.FillPath(&brush, path);
+        // graphics.DrawPath(&pen, path);
+
+        delete path;
+    }
+
+    void GdiRenderer::drawText(const std::string& text, const TextPosition& position, const Color& color)
     {
         if (!hdc)
         {
@@ -129,17 +172,14 @@ namespace Renderer
         ::SetTextColor(hdc, gdiColor);
         ::SetBkMode(hdc, TRANSPARENT);
 
-        ::HFONT hFont = static_cast<::HFONT>(::GetStockObject(DEFAULT_GUI_FONT));
+        ::HFONT hFont     = static_cast<::HFONT>(::GetStockObject(DEFAULT_GUI_FONT));
         ::HGDIOBJ oldFont = ::SelectObject(hdc, hFont);
 
         const Rect<int>& rect = position.rect;
 
-        ::RECT r_win = {
-            rect.x, rect.y, rect.x + rect.width, rect.y + rect.height
-        };
+        ::RECT r_win = { rect.x, rect.y, rect.x + rect.width, rect.y + rect.height };
 
-        ::UINT format = toGdiTextFormatFlags(position) | DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX |
-                      DT_END_ELLIPSIS;
+        ::UINT format = toGdiTextFormatFlags(position) | DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX | DT_END_ELLIPSIS;
 
         if (text.find('\n') != std::string::npos)
         {
@@ -150,4 +190,90 @@ namespace Renderer
 
         ::SelectObject(hdc, oldFont);
     }
+
+    void GdiRenderer::drawImage(const std::filesystem::path& filepath, const Rect<int>& rect)
+    {
+        if (!hdc)
+        {
+            return;
+        }
+
+        std::wstring widePath = filepath.wstring();
+        Gdiplus::Image image(widePath.c_str());
+
+        auto status = image.GetLastStatus();
+        if (status == Gdiplus::Ok)
+        {
+            drawImage(&image, rect);
+        }
+        else
+        {
+            switch (status)
+            {
+            case Gdiplus::GenericError:
+                break;
+            case Gdiplus::InvalidParameter:
+                break;
+            case Gdiplus::OutOfMemory:
+                break;
+            case Gdiplus::FileNotFound:
+                break;
+            default:
+                break;
+            }
+        }
+    }
+    void GdiRenderer::drawImage(Gdiplus::Image* image, const Rect<int>& rect)
+    {
+        if (!hdc || !image)
+        {
+            return;
+        }
+
+        Gdiplus::Graphics graphics(hdc);
+
+        graphics.SetInterpolationMode(Gdiplus::InterpolationModeHighQualityBicubic);
+
+        Gdiplus::Rect destRect = toGdiplusRect(rect);
+        graphics.DrawImage(image, destRect);
+    }
+    Gdiplus::GraphicsPath* GdiRenderer::getRoundedRectanglePath(const Rect<int>& bounds, int radius)
+    {
+        Gdiplus::GraphicsPath* path = new Gdiplus::GraphicsPath();
+        int diameter                = radius * 2;
+
+        if (diameter > bounds.width)
+        {
+            diameter = bounds.width;
+        }
+        if (diameter > bounds.height)
+        {
+            diameter = bounds.height;
+        }
+
+        Gdiplus::Rect gdiPlusRect = toGdiplusRect(bounds);
+
+        if (diameter <= 0)
+        {
+            path->AddRectangle(gdiPlusRect);
+            return path;
+        }
+
+        Gdiplus::Rect arc(gdiPlusRect.X, gdiPlusRect.Y, diameter, diameter);
+
+        path->AddArc(arc, 180, 90);
+
+        arc.X = gdiPlusRect.X + gdiPlusRect.Width - diameter;
+        path->AddArc(arc, 270, 90);
+
+        arc.Y = gdiPlusRect.Y + gdiPlusRect.Height - diameter;
+        path->AddArc(arc, 0, 90);
+
+        arc.X = gdiPlusRect.X;
+        path->AddArc(arc, 90, 90);
+
+        path->CloseFigure();
+        return path;
+    }
+
 }; // namespace Renderer

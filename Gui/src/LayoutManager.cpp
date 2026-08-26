@@ -72,17 +72,12 @@ namespace gui
         DockNode* leaf = findFirstLeaf(rootNode);
         if (!leaf || leaf->windows.empty())
         {
-            // Logger::log(
-            //     L"LayoutManager: Предупреждение. Нет доступных окон для "
-            //     L"удаления."
-            // );
+           
             return;
         }
 
         Window* destroyWindow = leaf->windows.back();
-        // Logger::log(
-        //     L"LayoutManager: Запрос на удаление последнего дочернего окна."
-        // );
+        
         removeWindowFromNode(leaf, destroyWindow);
         delete destroyWindow;
 
@@ -144,10 +139,7 @@ namespace gui
 
                 delete leaf;
                 delete parent;
-                // Logger::log(
-                //     L"LayoutManager: Пустой узел удален, ветви дерева "
-                //     L"схлопнуты."
-                // );
+                
             }
         }
     }
@@ -189,9 +181,7 @@ namespace gui
 
         recalcLayout(parent);
 
-        // Logger::log(
-        //     L"LayoutManager: Окно переведено во флотирующий режим."
-        // );
+       
         recalcLayout(parent);
 
         child->startSystemMove(cursorPos);
@@ -221,7 +211,6 @@ namespace gui
             leaf->windows.push_back(child);
             leaf->activeIndex   = static_cast<int>(leaf->windows.size()) - 1;
             childData->dockNode = leaf;
-            // Logger::log(L"LayoutManager: Окно добавлено как вкладка.");
         }
         else
         {
@@ -231,10 +220,7 @@ namespace gui
             {
                 delete c1;
                 delete c2;
-                // Logger::log(
-                //     L"LayoutManager: Критическая ошибка выделения памяти "
-                //     L"при разделении узла."
-                // );
+                
                 return;
             }
 
@@ -269,9 +255,7 @@ namespace gui
                 leaf->child1     = c2;
                 leaf->child2     = c1;
                 leaf->splitRatio = 0.3;
-                // Logger::log(
-                //     L"LayoutManager: Разделение по горизонтали (Левая дока)"
-                // );
+               
             }
             else if (action == DockAction::Right)
             {
@@ -279,9 +263,7 @@ namespace gui
                 leaf->child1     = c1;
                 leaf->child2     = c2;
                 leaf->splitRatio = 0.7;
-                // Logger::log(
-                //     L"LayoutManager: Разделение по горизонтали (Правая дока)"
-                // );
+               
             }
             else if (action == DockAction::Top)
             {
@@ -289,9 +271,7 @@ namespace gui
                 leaf->child1     = c2;
                 leaf->child2     = c1;
                 leaf->splitRatio = 0.3;
-                // Logger::log(
-                //     L"LayoutManager: Разделение по вертикали (Верхняя дока)"
-                // );
+                
             }
             else if (action == DockAction::Bottom)
             {
@@ -299,9 +279,7 @@ namespace gui
                 leaf->child1     = c1;
                 leaf->child2     = c2;
                 leaf->splitRatio = 0.7;
-                // Logger::log(
-                //     L"LayoutManager: Разделение по вертикали (Нижняя дока)"
-                // );
+                
             }
         }
 
@@ -392,7 +370,7 @@ namespace gui
                     Rect<int> { rightX, r.y, rightWidth, r.height }
                 );
             }
-            else // SplitVertical
+            else 
             {
                 const int splitY =
                     r.y + static_cast<int>(r.height * node->splitRatio);

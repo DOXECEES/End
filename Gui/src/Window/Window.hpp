@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>
 #include <functional>
+#include <string_view>
 
 #include "Renderer/Renderer.hpp"
 
@@ -79,6 +80,10 @@ namespace gui
         Window(int width, int height, const std::string& title, Window* parent = nullptr);
         ~Window();
 
+        std::string_view getClassName() const noexcept;
+        const std::string& getStyleSheetClass() const { return styleSheetClass; }
+
+
         void hide() const noexcept;
         void show() const noexcept;
 
@@ -91,6 +96,7 @@ namespace gui
 
         void addTransparency(uint8_t value) noexcept;
         void addTransparencyForInput() noexcept;
+        void addNoActivate() noexcept;
 
         void setTopMost(bool flag) noexcept;
         void skipTaskbar() noexcept;
@@ -131,10 +137,16 @@ namespace gui
         void setContent(std::unique_ptr<Widget> localRootWidget) noexcept;
         const std::unique_ptr<Widget>& getRoot() const noexcept;
 
+        void requestFocus(Widget* widget) noexcept;
+        Widget* getFocusedWidget() const noexcept;
+
+        void requestClose() noexcept;
+
       private:
         std::unique_ptr<Widget> rootWidget; 
         std::unique_ptr<WindowImpl> impl;
         std::string title;
+        std::string styleSheetClass;
     };
 
 } // namespace gui

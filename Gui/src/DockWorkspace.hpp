@@ -3,6 +3,7 @@
 #include <Color.hpp>
 #include <WideStringUtils.hpp>
 
+#include "Css/StyleSheetEngine.hpp"
 #include "Cursor.hpp"
 #include "LayoutManager.hpp"
 #include "Window/Window.hpp"
@@ -241,7 +242,8 @@ namespace gui
             DockNode* leaf      = data->dockNode;
             Rect<int> rect      = child->getClientRect();
 
-            r.clear(Color::fromRgb(245, 245, 245));
+            Color backgroundColor = StyleSheetEngine::getProperty<Color>("background-color", *child, Color::fromRgb(245, 245, 245));
+            r.clear(backgroundColor);
 
             int contentTop = 0;
             if (!floating && leaf)

@@ -3,6 +3,8 @@
 #include <WideStringUtils.hpp>
 
 #include "Application.hpp"
+#include "Css/StyleSheetEngine.hpp"
+#include "Renderer/Renderer.hpp"
 #include "Widgets/Widget.hpp"
 
 #ifndef UNICODE
@@ -54,6 +56,7 @@ namespace gui
         bool open = true;
         std::queue<Event> eventQueue;
 
+
         WindowImpl(Window* ownerPtr, int width, int height, const std::string& title, Window* parentPtr)
             : owner(ownerPtr), parent(parentPtr)
         {
@@ -97,7 +100,7 @@ namespace gui
 
             if (hwnd)
             {
-                ShowWindow(hwnd, SW_SHOW);
+                ShowWindow(hwnd, SW_SHOWNA);
                 UpdateWindow(hwnd);
             }
             else
@@ -157,12 +160,21 @@ namespace gui
             return open;
         }
 
+        void onPaint(Renderer::Renderer& renderer)
+        {
+            Color backgroundColor = StyleSheetEngine::getProperty<Color>("background-color", *owner);
+
+            auto rect = owner->getClientRect();
+            renderer.drawRect(rect, backgroundColor);
+        }
+
         void setStyleBatch(Flags<WindowStyles> styles) noexcept
         {
             ::DWORD style = 0;
             if (styles.has(WindowStyles::PopUp))
             {
                 style |= WS_POPUP;
+                style &= ~WS_OVERLAPPEDWINDOW;
             }
 
             if (styles.has(WindowStyles::Caption))
@@ -257,6 +269,17 @@ namespace gui
             }
         }
 
+        void addNoActivate() noexcept
+        {
+            mouseActivate = MA_NOACTIVATE;
+            if (hwnd)
+            {
+                LONG_PTR exStyle = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
+
+                SetWindowLongPtrW(hwnd, GWL_EXSTYLE, exStyle | WS_EX_NOACTIVATE);
+            }
+        }
+
         void setTopMost(bool flag) noexcept
         {
             if (hwnd)
@@ -306,7 +329,7 @@ namespace gui
 
         void show() const noexcept
         {
-            ::ShowWindow(hwnd, SW_SHOW);
+            ::ShowWindow(hwnd, mouseActivate == MA_NOACTIVATE ? SW_SHOWNA : SW_SHOW);
         }
 
         void* getWindowPointerData(WindowDataPointerType type) const noexcept
@@ -372,6 +395,64 @@ namespace gui
             return false;
         }
 
+        void requestFocus(Widget* widget) noexcept
+        {
+            if (widget)
+            {
+                focusedWidget = widget;
+                if (hwnd)
+                {
+                    ::SetFocus(hwnd);
+                }
+
+            }
+        }
+
+        void requestClose() noexcept
+        {
+            if (hwnd)
+            {
+                ::PostMessageW(hwnd, WM_CLOSE, 0, 0);
+            }
+        }
+
+        void updateScrollbar() noexcept
+        {
+            if (!hwnd || !owner || !owner->getRoot()) return;
+
+            RECT rcClient;
+            GetClientRect(hwnd, &rcClient);
+            int clientWidth  = rcClient.right - rcClient.left;
+            int clientHeight = rcClient.bottom - rcClient.top;
+
+            int preferredHeight = owner->getRoot()->getPreferredHeight();
+
+            if (preferredHeight > clientHeight)
+            {
+                SCROLLINFO si = {};
+                si.cbSize     = sizeof(si);
+                si.fMask      = SIF_RANGE | SIF_PAGE | SIF_POS | SIF_DISABLENOSCROLL;
+                si.nMin       = 0;
+                si.nMax       = preferredHeight - 1;
+                si.nPage      = clientHeight;
+                
+                scrollPos = (std::min)(scrollPos, preferredHeight - clientHeight);
+                si.nPos   = scrollPos;
+
+                ::SetScrollInfo(hwnd, SB_VERT, &si, TRUE);
+                ::ShowScrollBar(hwnd, SB_VERT, TRUE);
+            }
+            else
+            {
+                ::ShowScrollBar(hwnd, SB_VERT, FALSE);
+                scrollPos = 0;
+            }
+
+            int layoutHeight = (std::max)(preferredHeight, clientHeight);
+            owner->getRoot()->setBounds({ 0, -scrollPos, clientWidth, layoutHeight });
+        }
+
+
         std::function<void(Renderer::Renderer&)> paintCallback;
         std::function<void(int, int)> onSizeCallback;
         std::function<void(const Point<int>&)> mouseButtonDownCallback;
@@ -384,20 +465,18 @@ namespace gui
         Window* parent               = nullptr;
         Renderer::Renderer* renderer = nullptr;
 
+        Widget* focusedWidget = nullptr;
+
         void* userData = nullptr;
+
+        uint32 mouseActivate = MA_ACTIVATE;
+        int scrollPos = 0;
+
     };
 
     LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     {
-        // Извлекаем указатель на WindowImpl, сохраненный при создании
         WindowImpl* pImpl = reinterpret_cast<WindowImpl*>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
-
-        if (uMsg == WM_PAINT)
-        {
-            char buf[128];
-            sprintf_s(buf, "WM_PAINT hwnd=%p\n", (void*)hwnd);
-            OutputDebugStringA(buf);
-        }
 
         switch (uMsg)
         {
@@ -412,10 +491,17 @@ namespace gui
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hwnd, &ps);
 
-            if (pImpl && pImpl->paintCallback && pImpl->renderer && pImpl->owner)
+            if (pImpl && pImpl->renderer && pImpl->owner)
             {
                 pImpl->renderer->beginFrame(*pImpl->owner);
-                pImpl->paintCallback(*pImpl->renderer);
+                
+
+                //pImpl->onPaint(*pImpl->renderer);
+                if (pImpl->paintCallback)
+                {
+                    pImpl->paintCallback(*pImpl->renderer);
+                }
+
                 if (pImpl->owner->getRoot())
                 {
                     pImpl->owner->getRoot()->onPaint(*pImpl->renderer);
@@ -423,6 +509,7 @@ namespace gui
 
                 pImpl->renderer->endFrame();
             }
+
 
             EndPaint(hwnd, &ps);
             return 0;
@@ -440,6 +527,8 @@ namespace gui
                     pImpl->onSizeCallback(w, h);
                 }
 
+                pImpl->updateScrollbar();
+
                 if (pImpl->owner->getRoot())
                 {
                     pImpl->owner->getRoot()->setBounds({ 0, 0, w, h });
@@ -447,6 +536,92 @@ namespace gui
             }
             return 0;
         }
+
+        case WM_VSCROLL:
+        {
+            if (pImpl)
+            {
+                SCROLLINFO si = {};
+                si.cbSize     = sizeof(si);
+                si.fMask      = SIF_ALL;
+                ::GetScrollInfo(hwnd, SB_VERT, &si);
+
+                int oldPos = si.nPos;
+                switch (LOWORD(wParam))
+                {
+                case SB_TOP:          si.nPos = si.nMin; break;
+                case SB_BOTTOM:       si.nPos = si.nMax; break;
+                case SB_LINEUP:       si.nPos -= 12; break; 
+                case SB_LINEDOWN:     si.nPos += 12; break; 
+                case SB_PAGEUP:       si.nPos -= si.nPage; break;
+                case SB_PAGEDOWN:     si.nPos += si.nPage; break;
+                case SB_THUMBTRACK:   si.nPos = si.nTrackPos; break;
+                }
+
+                RECT rcClient;
+                GetClientRect(hwnd, &rcClient);
+                int clientHeight = rcClient.bottom - rcClient.top;
+
+                int maxPos = (std::max)(0, (int)si.nMax - (int)si.nPage + 1);
+                si.nPos = (std::max)(0, (std::min)(si.nPos, maxPos));
+
+                if (si.nPos != oldPos)
+                {
+                    pImpl->scrollPos = si.nPos;
+                    si.fMask         = SIF_POS;
+                    ::SetScrollInfo(hwnd, SB_VERT, &si, TRUE);
+                    
+                    int w = rcClient.right - rcClient.left;
+                    if (pImpl->owner->getRoot())
+                    {
+                        int preferredHeight = pImpl->owner->getRoot()->getPreferredHeight();
+                        pImpl->owner->getRoot()->setBounds({ 0, -pImpl->scrollPos, w, (std::max)(preferredHeight, clientHeight) });
+                    }
+                    pImpl->repaint(true);
+                }
+            }
+            return 0;
+        }
+
+        case WM_MOUSEWHEEL:
+        {
+            if (pImpl)
+            {
+                short delta = GET_WHEEL_DELTA_WPARAM(wParam);
+                int lines = delta / WHEEL_DELTA;
+                
+                int scrollAmt = -lines * 36; 
+
+                RECT rcClient;
+                ::GetClientRect(hwnd, &rcClient);
+                int clientHeight = rcClient.bottom - rcClient.top;
+
+                if (pImpl->owner->getRoot())
+                {
+                    int preferredHeight = pImpl->owner->getRoot()->getPreferredHeight();
+                    int maxPos = (std::max)(0, preferredHeight - clientHeight);
+                    
+                    int oldPos = pImpl->scrollPos;
+                    pImpl->scrollPos = (std::max)(0, (std::min)(pImpl->scrollPos + scrollAmt, maxPos));
+
+                    if (pImpl->scrollPos != oldPos)
+                    {
+                        SCROLLINFO si = {};
+                        si.cbSize     = sizeof(si);
+                        si.fMask      = SIF_POS;
+                        si.nPos       = pImpl->scrollPos;
+                        ::SetScrollInfo(hwnd, SB_VERT, &si, TRUE);
+
+                        int w = rcClient.right - rcClient.left;
+                        pImpl->owner->getRoot()->setBounds({ 0, -pImpl->scrollPos, w, (std::max)(preferredHeight, clientHeight) });
+                        pImpl->repaint(true);
+                    }
+                }
+            }
+            return 0;
+        }
+
+
         case WM_LBUTTONDOWN:
         {
             if (pImpl)
@@ -456,10 +631,16 @@ namespace gui
                 Point<int> mousePos { x, y };
 
                 pImpl->eventQueue.push({ EventType::LButtonDown, 0, mousePos });
+                pImpl->focusedWidget = nullptr;
 
                 if (pImpl->mouseButtonDownCallback)
                 {
                     pImpl->mouseButtonDownCallback(mousePos);
+                }
+
+                if (pImpl->mouseActivate != MA_NOACTIVATE)
+                {
+                    ::SetFocus(hwnd);
                 }
 
                 if (pImpl->owner->getRoot())
@@ -522,6 +703,51 @@ namespace gui
             return 0;
         }
 
+        case WM_SETCURSOR:
+        {
+            if (pImpl)
+            {
+                if (LOWORD(lParam) == HTCLIENT)
+                {
+                    POINT pt;
+                    ::GetCursorPos(&pt);
+                    ::ScreenToClient(hwnd, &pt);
+                    Point<int> clientMousePos { static_cast<int>(pt.x), static_cast<int>(pt.y) };
+
+                    Widget* hoveredWidget = nullptr;
+                    if (pImpl->owner->getRoot())
+                    {
+                        hoveredWidget = pImpl->owner->getRoot()->getWidgetAt(clientMousePos);
+                    }
+
+                    if (hoveredWidget)
+                    {
+                        std::string cursorType = "default";
+                        cursorType = StyleSheetEngine::getProperty<std::string>("cursor", *hoveredWidget, cursorType);
+
+                        if (cursorType == "pointer")
+                        {
+                            ::SetCursor(::LoadCursorW(nullptr, IDC_HAND));
+                            return TRUE; 
+                        }
+                    }
+
+                    ::SetCursor(::LoadCursorW(nullptr, IDC_ARROW));
+                    return TRUE;
+                }
+            }
+            break; 
+        }
+        case WM_CHAR:
+        {
+            if (pImpl && pImpl->focusedWidget)
+            {
+                pImpl->focusedWidget->onCharInput(static_cast<wchar_t>(wParam));
+                pImpl->repaint(true);
+            }
+            return 0;
+        }
+
         case WM_MOVING:
         {
             if (pImpl)
@@ -532,7 +758,6 @@ namespace gui
                 }
                 );
 
-                // Вызов функтора
                 if (pImpl->movingCallback)
                 {
                     pImpl->movingCallback();
@@ -558,6 +783,13 @@ namespace gui
             }
             return 0;
         }
+        case WM_MOUSEACTIVATE:
+        {
+            return pImpl->mouseActivate;
+            //MA_NOACTIVATE;
+        }
+        
+
         case WM_ERASEBKGND:
             return 1;
         case WM_KEYDOWN:
@@ -575,7 +807,15 @@ namespace gui
         }
         case WM_DESTROY:
         {
-            PostQuitMessage(0);
+            if (pImpl)
+            {
+                LONG_PTR style = ::GetWindowLongPtrW(hwnd, GWL_STYLE);
+
+                if (!(style & WS_CHILD) && !(style & WS_POPUP))
+                {
+                    ::PostQuitMessage(0); 
+                }
+            }
             return 0;
         }
         case WM_NCDESTROY:
@@ -605,6 +845,11 @@ namespace gui
     void Window::hide() const noexcept
     {
         impl->hide();
+    }
+
+    std::string_view Window::getClassName() const noexcept
+    {
+        return "Window";
     }
 
     void Window::show() const noexcept
@@ -645,6 +890,10 @@ namespace gui
     void Window::addTransparencyForInput() noexcept
     {
         impl->addTransparencyForInput();
+    }
+    void Window::addNoActivate() noexcept
+    {
+        impl->addNoActivate();
     }
 
     void Window::setTopMost(bool flag) noexcept
@@ -781,6 +1030,8 @@ namespace gui
 
             Rect<int> clientRect = getClientRect();
             rootWidget->setBounds(clientRect);
+
+            impl->updateScrollbar();
         }
     }
 
@@ -788,5 +1039,21 @@ namespace gui
     {
         return rootWidget;
     }
+
+    void Window::requestFocus(Widget* widget) noexcept 
+    {
+        impl->requestFocus(widget);
+    }
+
+
+    Widget* Window::getFocusedWidget() const noexcept
+    {
+        return impl->focusedWidget;
+    }
+
+    void Window::requestClose() noexcept
+    {
+        impl->requestClose();
+    };
 
 } // namespace gui

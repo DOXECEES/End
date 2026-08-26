@@ -1,9 +1,17 @@
 #include "Widget.hpp"
 
+#include "Window/Window.hpp"
+#include "Css/StyleSheetEngine.hpp"
+
 #include <utility>
 
 namespace gui
 {
+    void Widget::onPaint(Renderer::Renderer& r)
+    {
+
+    };
+
     const WidgetSizePolicy& Widget::getVerticalSizePolicy() const noexcept
     {
         return verticalSizePolicy;
@@ -96,6 +104,19 @@ namespace gui
         horizontalSizePolicy.policy = SizePolicy::Flex;
         horizontalSizePolicy.value  = weight;
         return std::move(*this);
+    }
+    bool Widget::isFocused() const noexcept 
+    {
+        return window->getFocusedWidget() == this;
+    }
+    int Widget::getPreferredHeight() const
+    {
+        const auto& sp = getVerticalSizePolicy();
+        if (sp.policy == SizePolicy::Fixed || sp.policy == SizePolicy::Auto)
+        {
+            return sp.value;
+        }
+        return bounds.height;
     }
 
 } // namespace gui
