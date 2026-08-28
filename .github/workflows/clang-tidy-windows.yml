@@ -1,0 +1,40 @@
+name: Clang-Tidy Static Analysis (Windows)
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  clang-tidy-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up MSVC Developer Command Prompt
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Generate Compile Commands
+        shell: pwsh
+        run: |
+          cmake -G Ninja -B build -S . -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      - name: Run Clang-Tidy
+        uses: cpp-linter/cpp-linter-action@v2
+        id: linter
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          style: 'file'  
+          tidy-checks: 'boost-*,bugprone-*,performance-*,readability-*'
+          database: 'build' 
+
+      - name: Fail on errors
+        if: steps.linter.outputs.checks-failed > 0
+        shell: pwsh
+        run: |
+          echo "Static analysis detected issues."
+          exit 1
