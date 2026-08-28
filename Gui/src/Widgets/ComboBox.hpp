@@ -54,6 +54,7 @@ namespace gui {
 
             bgColor = StyleSheetEngine::getProperty<Color>("background-color", *this, bgColor);
             textColor = StyleSheetEngine::getProperty<Color>("text-color", *this, textColor);
+            auto font = StyleSheetEngine::getProperty<std::shared_ptr<Renderer::Font>>("font", *this);
 
             r.drawRect(bounds, bgColor);
 
@@ -67,7 +68,7 @@ namespace gui {
                 bounds.height 
             };
             Renderer::TextPosition textPos = { textRect, Renderer::TextAlignment::Left };
-            r.drawText(itemText, textPos, textColor);
+            r.drawText(itemText, textPos, textColor, *font);
         }
     };
 
@@ -101,6 +102,7 @@ namespace gui {
             bgColor = StyleSheetEngine::getProperty<Color>("background-color", *this, bgColor);
             borderColor = StyleSheetEngine::getProperty<Color>("border-color", *this, borderColor);
             textColor = StyleSheetEngine::getProperty<Color>("text-color", *this, textColor);
+            auto font = StyleSheetEngine::getProperty<std::shared_ptr<Renderer::Font>>("font", *this);
 
             if (isOpened) {
                 borderColor = Color::fromRgb(0, 122, 204); 
@@ -128,7 +130,7 @@ namespace gui {
             
             Rect<int> arrowRect = { arrowX, arrowY, arrowWidth, (std::max)(0, arrowH) };
             Renderer::TextPosition arrowPos = { arrowRect, Renderer::TextAlignment::Center };
-            r.drawText("\xe2\x96\xbc", arrowPos, textColor); 
+            r.drawText("\xe2\x96\xbc", arrowPos, textColor, *font); 
 
             std::string displayText = (selectedIndex >= 0) ? items[selectedIndex] : placeholder;
             
@@ -141,7 +143,7 @@ namespace gui {
             Rect<int> textRect = { textX, textY, (std::max)(0, textW), (std::max)(0, textH) };
             Renderer::TextPosition textPos = { textRect, Renderer::TextAlignment::Left };
             
-            r.drawText(displayText, textPos, (selectedIndex >= 0) ? textColor : Color::fromRgb(150, 150, 150));
+            r.drawText(displayText, textPos, (selectedIndex >= 0) ? textColor : Color::fromRgb(150, 150, 150), *font);
         }
 
         bool onMouseButtonDown(const Point<int>& pt) override {

@@ -10,6 +10,7 @@ namespace gui
     {
         Widget::onPaint(r);
         Color textColor = StyleSheetEngine::getProperty<Color>("text-color", *this, Color::fromRgb(40, 40, 40));
+        auto font = StyleSheetEngine::getProperty<std::shared_ptr<Renderer::Font>>("font", *this);
 
         Padding padding = StyleSheetEngine::getProperty<Padding>("padding", *this);
 
@@ -22,7 +23,7 @@ namespace gui
         contentH = (std::max)(0, contentH);
 
         Renderer::TextPosition pos = { { contentX, contentY, contentW, contentH }, Renderer::TextAlignment::Center };
-        r.drawText(text, pos, textColor);
+        r.drawText(text, pos, textColor, *font);
     }
     void Label::setText(const std::string& localText) noexcept
     {

@@ -1,7 +1,7 @@
 #include "Window/Window.hpp"
 #include "Application.hpp"
 #include "Renderer/Renderer.hpp"
-#include "Renderer/GdiRenderer/GdiRenderer.hpp"
+#include "Renderer/GdiRenderer/GdiGraphicsFactory.hpp"
 #include "DockWorkspace.hpp"
 
 #include "Widgets/Button.hpp"
@@ -134,8 +134,8 @@ namespace gui {
 
 int main()
 {
-    auto nativeRenderer = std::make_shared<Renderer::GdiRenderer>();
-    gui::Application app(nativeRenderer);
+    auto graphics = std::make_unique<gui::GdiGraphicsFactory>();
+    gui::Application app(std::move(graphics));
 
     gui::StyleSheet ledgerTheme = {
         { "Window", {

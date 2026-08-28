@@ -3,10 +3,17 @@
 #include "StyleSheet.hpp"
 #include <Padding.hpp>
 
+#include "Renderer/FontStore.hpp"
+// Если у вас есть заголовочный файл с CssFontProperties, раскомментируйте:
+#include "Css/CssFontProperties.hpp" 
+
+#include <memory>
 #include <string>
 
 namespace gui
 {
+    class Widget;
+    class Window;
 
     class StyleSheetEngine
     {
@@ -27,10 +34,18 @@ namespace gui
         {
             styleSheet = sheet;
         }
+        
+
+        static void setFontStore(const std::shared_ptr<Renderer::FontStore>& store) noexcept
+        {
+            fontStore = store;
+        }
 
       private:
         inline static StyleSheet styleSheet;
+        inline static std::shared_ptr<Renderer::FontStore> fontStore = nullptr;
     };
+
 
     template <>
     inline Padding
@@ -42,6 +57,95 @@ namespace gui
                          .top   = styleSheet.getProperty<int>(name + "-top", widget, base.top),
                          .right = styleSheet.getProperty<int>(name + "-right", widget, base.right),
                          .bottom = styleSheet.getProperty<int>(name + "-bottom", widget, base.bottom) };
+    }
+
+    template <>
+    inline CssFontProperties
+    StyleSheetEngine::getProperty<CssFontProperties>(
+        const std::string& name, 
+        const Widget& widget, 
+        CssFontProperties defaultValue
+    ) noexcept
+    {
+        std::string prefix = (name == "font" || name.empty()) ? "font-" : name + "-";
+
+        std::string family = styleSheet.getProperty<std::string>(prefix + "family", widget, defaultValue.family);
+        
+        int size           = styleSheet.getProperty<int>(prefix + "size", widget, static_cast<int>(defaultValue.size));
+        int weight         = styleSheet.getProperty<int>(prefix + "weight", widget, defaultValue.weight);
+        
+        std::string style  = styleSheet.getProperty<std::string>(prefix + "style", widget, defaultValue.italic ? "italic" : "normal");
+        bool italic        = (style == "italic");
+
+        return CssFontProperties {
+            .family = family,
+            .size = static_cast<float>(size), 
+            .weight = weight,
+            .italic = italic
+        };
+    }
+
+    template <>
+    inline std::shared_ptr<Renderer::Font>
+    StyleSheetEngine::getProperty<std::shared_ptr<Renderer::Font>>(
+        const std::string& name, 
+        const Widget& widget, 
+        std::shared_ptr<Renderer::Font> defaultValue
+    ) noexcept
+    {
+        CssFontProperties defaultProps;
+        CssFontProperties props = getProperty<CssFontProperties>(name, widget, defaultProps);
+
+        if (fontStore)
+        {
+            return fontStore->getFont(props);
+        }
+
+        return defaultValue;
+    }
+
+    template <>
+    inline CssFontProperties
+    StyleSheetEngine::getProperty<CssFontProperties>(
+        const std::string& name, 
+        const Window& window, 
+        CssFontProperties defaultValue
+    ) noexcept
+    {
+        std::string prefix = (name == "font" || name.empty()) ? "font-" : name + "-";
+
+        std::string family = styleSheet.getProperty<std::string>(prefix + "family", window, defaultValue.family);
+        int size           = styleSheet.getProperty<int>(prefix + "size", window, static_cast<int>(defaultValue.size));
+        int weight         = styleSheet.getProperty<int>(prefix + "weight", window, defaultValue.weight);
+        
+        std::string style  = styleSheet.getProperty<std::string>(prefix + "style", window, defaultValue.italic ? "italic" : "normal");
+        bool italic        = (style == "italic");
+
+        return CssFontProperties {
+            .family = family,
+            .size = static_cast<float>(size),
+            .weight = weight,
+            .italic = italic
+        };
+    }
+
+    template <>
+    inline std::shared_ptr<Renderer::Font>
+    StyleSheetEngine::getProperty<std::shared_ptr<Renderer::Font>>(
+        const std::string& name, 
+        const Window& window, 
+        std::shared_ptr<Renderer::Font> defaultValue
+    ) noexcept
+    {
+        CssFontProperties defaultProps;
+        CssFontProperties props = getProperty<CssFontProperties>(name, window, defaultProps);
+
+        if (fontStore)
+        {
+            return fontStore->getFont(props);
+        }
+
+        return defaultValue;
     }
 
 }; // namespace gui

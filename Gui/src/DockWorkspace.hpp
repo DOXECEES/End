@@ -243,6 +243,8 @@ namespace gui
             Rect<int> rect      = child->getClientRect();
 
             Color backgroundColor = StyleSheetEngine::getProperty<Color>("background-color", *child, Color::fromRgb(245, 245, 245));
+            auto font = StyleSheetEngine::getProperty<std::shared_ptr<Renderer::Font>>("font", *this);
+            
             r.clear(backgroundColor);
 
             int contentTop = 0;
@@ -279,7 +281,7 @@ namespace gui
                             Renderer::TextAlignment::Center
                         };
 
-                        r.drawText(tabTitle, pos, textColor);
+                        r.drawText(tabTitle, pos, textColor, *font);
                     }
                 }
                 else
@@ -293,14 +295,14 @@ namespace gui
                         Renderer::TextAlignment::Left
                     };
 
-                    r.drawText(title, pos, Color::fromRgb(50, 50, 50));
+                    r.drawText(title, pos, Color::fromRgb(50, 50, 50), *font);
 
                     Renderer::TextPosition pos2 = {
                         { rect.x, rect.y, rect.width - 10, 25 },
                         Renderer::TextAlignment::Right
                     };
 
-                    r.drawText("[Потяните шапку для отстыковки]", pos2, Color::fromRgb(100, 100, 100));
+                    r.drawText("[Потяните шапку для отстыковки]", pos2, Color::fromRgb(100, 100, 100), *font);
                 }
             }
 
@@ -319,7 +321,7 @@ namespace gui
 
             Renderer::TextPosition pos = { contentRect, Renderer::TextAlignment::Left };
 
-            r.drawText(displayMsg, pos, Colors::Black);
+            r.drawText(displayMsg, pos, Colors::Black, *font);
         }
 
       private:

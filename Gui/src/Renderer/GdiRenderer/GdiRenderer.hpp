@@ -28,7 +28,8 @@ namespace Renderer
         void drawText(
             const std::string& text,
             const TextPosition& position,
-            const Color& color
+            const Color& color,
+            const Font& font
         ) override;
 
         void drawImage(const std::filesystem::path& path, const Rect<int>& rect) override;

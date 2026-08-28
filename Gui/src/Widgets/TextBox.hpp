@@ -27,6 +27,7 @@ namespace gui {
             Color bgColor = StyleSheetEngine::getProperty<Color>("background-color", *this, Color::fromRgb(255, 255, 255));
             Color borderColor = StyleSheetEngine::getProperty<Color>("border-color", *this, Color::fromRgb(180, 180, 180));
             Color textColor = StyleSheetEngine::getProperty<Color>("text-color", *this, Color::fromRgb(30, 30, 30));
+            auto font = StyleSheetEngine::getProperty<std::shared_ptr<Renderer::Font>>("font", *this);
 
             if (isFocused()) {
                 borderColor = Color::fromRgb(0, 122, 204);
@@ -52,7 +53,7 @@ namespace gui {
             Rect<int> textRect = { bounds.x + 8, bounds.y, bounds.width - 16, bounds.height };
             Renderer::TextPosition pos = { textRect, Renderer::TextAlignment::Left };
             
-            r.drawText(textToDraw, pos, finalTextColor);
+            r.drawText(textToDraw, pos, finalTextColor, *font);
         }
 
         bool onMouseButtonDown(const Point<int>& pt) override {

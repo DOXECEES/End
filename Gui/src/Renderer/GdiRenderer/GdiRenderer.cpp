@@ -1,5 +1,5 @@
 #include "GdiRenderer.hpp"
-
+#include "GdiFont.hpp"
 #include <WideStringUtils.hpp>
 
 #include "Window/Window.hpp"
@@ -159,7 +159,7 @@ namespace Renderer
         delete path;
     }
 
-    void GdiRenderer::drawText(const std::string& text, const TextPosition& position, const Color& color)
+    void GdiRenderer::drawText(const std::string& text, const TextPosition& position, const Color& color, const Font& font)
     {
         if (!hdc)
         {
@@ -172,7 +172,9 @@ namespace Renderer
         ::SetTextColor(hdc, gdiColor);
         ::SetBkMode(hdc, TRANSPARENT);
 
-        ::HFONT hFont     = static_cast<::HFONT>(::GetStockObject(DEFAULT_GUI_FONT));
+        const auto& gdiFont = static_cast<const GdiFont&>(font);
+        ::HFONT hFont = gdiFont.getHandle();
+
         ::HGDIOBJ oldFont = ::SelectObject(hdc, hFont);
 
         const Rect<int>& rect = position.rect;

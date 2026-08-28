@@ -2,7 +2,9 @@
 #include "Application.hpp"
 
 #include <Windows.h>
+#include <memory>
 
+#include "Renderer/GraphicsFactory.hpp"
 #include "Window/Window.hpp"
 
 namespace gui
@@ -15,12 +17,15 @@ namespace gui
     };
 
     Application::Application(
-        std::shared_ptr<Renderer::Renderer> renderer
+        std::unique_ptr<GraphicsFactory> graphicsFactory
     ) noexcept
         : impl(std::make_unique<ApplicationImpl>())
+        , graphicsFactory(std::move(graphicsFactory))
     {
-        impl->renderer = std::move(renderer);
+        impl->renderer = this->graphicsFactory->createRenderer();
+        fontStore = std::make_shared<Renderer::FontStore>(*this->graphicsFactory);
         staticInstance = this;
+        styleSheetEngine.setFontStore(fontStore);
     }
 
     Application::~Application() = default;

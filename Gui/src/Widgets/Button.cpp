@@ -1,4 +1,5 @@
 #include "Button.hpp"
+#include "Application.hpp"
 
 namespace gui
 {
@@ -44,7 +45,10 @@ namespace gui
             { contentX, contentY, contentW, contentH },
             Renderer::TextAlignment::Center
         };
-        r.drawText(text, pos, textColor);
+
+        auto font = StyleSheetEngine::getProperty<std::shared_ptr<Renderer::Font>>("font", *this);
+
+        r.drawText(text, pos, textColor, *font);
     }
     bool Button::onMouseButtonDown(const Point<int>& pt)
     {

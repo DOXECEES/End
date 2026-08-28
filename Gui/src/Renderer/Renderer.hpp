@@ -4,6 +4,8 @@
 #include <Rect.hpp>
 #include <Types.hpp>
 
+#include "Font.hpp"
+
 #include <string>
 #include <filesystem>
 
@@ -39,7 +41,7 @@ namespace Renderer
         virtual void drawRoundedRect(const Rect<int>& rect, const Color& color, int radius) = 0;
 
         virtual void drawText(
-            const std::string& text, const TextPosition& position, const Color& color
+            const std::string& text, const TextPosition& position, const Color& color, const Font& font
         ) = 0;
 
         virtual void drawImage(const std::filesystem::path& path, const Rect<int>& rect) = 0;

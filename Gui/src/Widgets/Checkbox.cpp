@@ -1,5 +1,7 @@
 #include "Checkbox.hpp"
 
+#include "Css/StyleSheetEngine.hpp"
+
 namespace gui
 {
 
@@ -17,6 +19,9 @@ namespace gui
     {
         Widget::onPaint(r);
 
+        auto font = StyleSheetEngine::getProperty<std::shared_ptr<Renderer::Font>>("font", *this);
+
+
         const int boxSize = 14;   
         const int paddingLeft = 4;  
         
@@ -32,7 +37,7 @@ namespace gui
         if (checked)
         {
             Renderer::TextPosition checkPos = { innerBoxRect, Renderer::TextAlignment::Center };
-            r.drawText("X", checkPos, Color::fromRgb(0, 120, 215)); 
+            r.drawText("X", checkPos, Color::fromRgb(0, 120, 215), *font); 
         }
 
         int textX = boxX + boxSize + 8; 
@@ -41,7 +46,7 @@ namespace gui
         Rect<int> textRect = { textX, bounds.y, textWidth, bounds.height };
         
         Renderer::TextPosition textPos = { textRect, Renderer::TextAlignment::Left };
-        r.drawText(text, textPos, Color::fromRgb(0, 0, 0));
+        r.drawText(text, textPos, Color::fromRgb(0, 0, 0), *font);
     }
 
     bool Checkbox::onMouseButtonDown(const Point<int>& pt)
